@@ -52,17 +52,9 @@ class _Bootstrap:
     jquery_filename = 'jquery.min.js'
     popper_filename = 'popper.min.js'
 
-    def __init__(self, jinja_env, **options):
-        self.jinja_env = jinja_env
+    def __init__(self, **options):
         self.popper_name = None
         self.config = options
-
-        self.jinja_env.globals['bootstrap'] = self
-        self.jinja_env.globals['bootstrap_is_hidden_field'] = is_hidden_field_filter
-        self.jinja_env.globals['get_table_titles'] = get_table_titles
-        self.jinja_env.globals['warn'] = warnings.warn
-        self.jinja_env.globals['raise'] = raise_helper
-
         # default settings
         self.config.setdefault('BOOTSTRAP_SERVE_LOCAL', False)
         self.config.setdefault('BOOTSTRAP_BTN_STYLE', 'primary')
@@ -80,6 +72,11 @@ class _Bootstrap:
             'BOOTSTRAP_FORM_INLINE_CLASSES',
             'row row-cols-lg-auto g-3 align-items-center'
         )  # Bootstrap 5 only
+
+    def get_jinja_env(self):
+        jinja_env = {'bootstrap': self, 'bootstrap_is_hidden_field': is_hidden_field_filter,
+                     'get_table_titles': get_table_titles, 'warn': warnings.warn, 'raise': raise_helper}
+        return jinja_env
 
     def load_css(self, version=None, bootstrap_sri=None):
         """Load Bootstrap's css resources with given version.

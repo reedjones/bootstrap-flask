@@ -1,5 +1,56 @@
 # Bootstrap-Flask
 
+## Added Django support
+
+for django:
+
+file: MyApp/jinja2.py
+
+```python
+from django.templatetags.static import static
+from django.urls import reverse
+from django.conf import settings
+from jinja2 import Environment
+from django_bootstrap import Bootstrap5
+
+
+def environment(**options):
+    env = Environment(**options)
+    env.add_extension("jinja2.ext.do") # add ext.do extension
+    bootstrap = Bootstrap5(**settings.get("BOOTSTRAP_CONFIG", {})) # optional bootstrap setting from django conf
+    env.globals.update(bootstrap.get_jinja_env()) # update jinja2 globals
+    env.globals.update(
+        {
+            "static": static,
+            "url": reverse,
+            'settings': settings,
+
+        }
+    )
+    return env
+
+```
+
+file: MyApp/settings.py
+```python
+TEMPLATES = [
+    {
+        "BACKEND": 'django.template.backends.jinja2.Jinja2',
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+            "environment": "MyApp.jinja2.environment"
+
+        },
+    }
+  ]
+```
+
 ![PyPI - License](https://img.shields.io/pypi/l/bootstrap-flask)
 [![Current version on PyPI](https://img.shields.io/pypi/v/bootstrap-flask)](https://pypi.org/project/bootstrap-flask/)
 [![Build status](https://github.com/helloflask/bootstrap-flask/workflows/build/badge.svg)](https://github.com/helloflask/bootstrap-flask/actions)
