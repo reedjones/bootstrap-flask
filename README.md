@@ -37,6 +37,7 @@ TEMPLATES = [
     {
         "BACKEND": 'django.template.backends.jinja2.Jinja2',
         "APP_DIRS": True,
+        "DIRS": [BASE_DIR / 'django_bootstrap' / 'templates'], # <- add bootstrap templates directory 
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
