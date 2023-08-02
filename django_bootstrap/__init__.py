@@ -1,6 +1,8 @@
+__author__ = "reed@reedjones.me"
+
 import warnings
 
-
+from django.conf import settings
 from markupsafe import Markup
 from wtforms import BooleanField, HiddenField
 
@@ -50,41 +52,40 @@ class _Bootstrap:
     jquery_filename = 'jquery.min.js'
     popper_filename = 'popper.min.js'
 
-    def __init__(self, app=None):
-        if app is not None:  # pragma: no branch
-            self.init_app(app)
+    def __init__(self, **options):
+        self.popper_name = None
+        self.config = options
+        self.extensions = {}
+        self.jinja_env = {}
+        if not hasattr(self, 'extensions'):
+            self.extensions = {}  # pragma: no cover
+        self.extensions['bootstrap'] = self
 
-    def init_app(self, app):
+        # blueprint = Blueprint('bootstrap', __name__, static_folder=f'static/{self.static_folder}',
+        #                       static_url_path=f'/bootstrap{self.static_url_path}',
+        #                       template_folder='templates')
+        # self.register_blueprint(blueprint)
 
-        if not hasattr(app, 'extensions'):
-            app.extensions = {}  # pragma: no cover
-        app.extensions['bootstrap'] = self
+        self.jinja_env['bootstrap'] = self
+        self.jinja_env['bootstrap_is_hidden_field'] = is_hidden_field_filter
+        self.jinja_env['get_table_titles'] = get_table_titles
+        self.jinja_env['warn'] = warnings.warn
+        self.jinja_env['raise'] = raise_helper
 
-        blueprint = Blueprint('bootstrap', __name__, static_folder=f'static/{self.static_folder}',
-                              static_url_path=f'/bootstrap{app.static_url_path}',
-                              template_folder='templates')
-        app.register_blueprint(blueprint)
-
-        app.jinja_env.globals['bootstrap'] = self
-        app.jinja_env.globals['bootstrap_is_hidden_field'] = is_hidden_field_filter
-        app.jinja_env.globals['get_table_titles'] = get_table_titles
-        app.jinja_env.globals['warn'] = warnings.warn
-        app.jinja_env.globals['raise'] = raise_helper
-        app.jinja_env.add_extension('jinja2.ext.do')
         # default settings
-        app.config.setdefault('BOOTSTRAP_SERVE_LOCAL', False)
-        app.config.setdefault('BOOTSTRAP_BTN_STYLE', 'primary')
-        app.config.setdefault('BOOTSTRAP_BTN_SIZE', 'md')
-        app.config.setdefault('BOOTSTRAP_BOOTSWATCH_THEME', None)
-        app.config.setdefault('BOOTSTRAP_ICON_SIZE', '1em')
-        app.config.setdefault('BOOTSTRAP_ICON_COLOR', None)
-        app.config.setdefault('BOOTSTRAP_MSG_CATEGORY', 'primary')
-        app.config.setdefault('BOOTSTRAP_TABLE_VIEW_TITLE', 'View')
-        app.config.setdefault('BOOTSTRAP_TABLE_EDIT_TITLE', 'Edit')
-        app.config.setdefault('BOOTSTRAP_TABLE_DELETE_TITLE', 'Delete')
-        app.config.setdefault('BOOTSTRAP_TABLE_NEW_TITLE', 'New')
-        app.config.setdefault('BOOTSTRAP_FORM_GROUP_CLASSES', 'mb-3')  # Bootstrap 5 only
-        app.config.setdefault(
+        self.config.setdefault('BOOTSTRAP_SERVE_LOCAL', False)
+        self.config.setdefault('BOOTSTRAP_BTN_STYLE', 'primary')
+        self.config.setdefault('BOOTSTRAP_BTN_SIZE', 'md')
+        self.config.setdefault('BOOTSTRAP_BOOTSWATCH_THEME', None)
+        self.config.setdefault('BOOTSTRAP_ICON_SIZE', '1em')
+        self.config.setdefault('BOOTSTRAP_ICON_COLOR', None)
+        self.config.setdefault('BOOTSTRAP_MSG_CATEGORY', 'primary')
+        self.config.setdefault('BOOTSTRAP_TABLE_VIEW_TITLE', 'View')
+        self.config.setdefault('BOOTSTRAP_TABLE_EDIT_TITLE', 'Edit')
+        self.config.setdefault('BOOTSTRAP_TABLE_DELETE_TITLE', 'Delete')
+        self.config.setdefault('BOOTSTRAP_TABLE_NEW_TITLE', 'New')
+        self.config.setdefault('BOOTSTRAP_FORM_GROUP_CLASSES', 'mb-3')  # Bootstrap 5 only
+        self.config.setdefault(
             'BOOTSTRAP_FORM_INLINE_CLASSES',
             'row row-cols-lg-auto g-3 align-items-center'
         )  # Bootstrap 5 only
@@ -96,8 +97,8 @@ class _Bootstrap:
 
         :param version: The version of Bootstrap.
         """
-        serve_local = current_app.config['BOOTSTRAP_SERVE_LOCAL']
-        bootswatch_theme = current_app.config['BOOTSTRAP_BOOTSWATCH_THEME']
+        serve_local = False
+        bootswatch_theme = settings['BOOTSTRAP_BOOTSWATCH_THEME']
         if version is None:
             version = self.bootstrap_version
         bootstrap_sri = self._get_sri('bootstrap_css', version, bootstrap_sri)
@@ -107,7 +108,7 @@ class _Bootstrap:
                 base_path = 'css'
             else:
                 base_path = f'css/bootswatch/{bootswatch_theme.lower()}'
-            boostrap_url = url_for('bootstrap.static', filename=f'{base_path}/{self.bootstrap_css_filename}')
+            boostrap_url = None
         else:
             if not bootswatch_theme:
                 base_path = f'{CDN_BASE}/bootstrap@{version}/dist/css'
@@ -123,7 +124,7 @@ class _Bootstrap:
 
     def _get_js_script(self, version, name, sri, nonce):
         """Get <script> tag for JavaScript resources."""
-        serve_local = current_app.config['BOOTSTRAP_SERVE_LOCAL']
+        serve_local = settings['BOOTSTRAP_SERVE_LOCAL']
         paths = {
             'bootstrap': f'js/{self.bootstrap_js_filename}',
             'jquery': f'{self.jquery_filename}',
@@ -131,7 +132,7 @@ class _Bootstrap:
             'popper.js': f'umd/{self.popper_filename}',
         }
         if serve_local:
-            url = url_for('bootstrap.static', filename=paths[name])
+            url = None
         else:
             url = f'{CDN_BASE}/{name}@{version}/dist/{paths[name]}'
         nonce_attribute = f' nonce="{nonce}"' if nonce else ''
@@ -139,7 +140,7 @@ class _Bootstrap:
         return f'<script src="{url}"{sri_attributes}{nonce_attribute}></script>'
 
     def _get_sri(self, name, version, sri):
-        serve_local = current_app.config['BOOTSTRAP_SERVE_LOCAL']
+        serve_local = False
         sris = {
             'bootstrap_css': self.bootstrap_css_integrity,
             'bootstrap_js': self.bootstrap_js_integrity,
@@ -206,19 +207,19 @@ class Bootstrap4(_Bootstrap):
         from flask import Flask
         from flask_bootstrap import Bootstrap4
 
-        app = Flask(__name__)
-        bootstrap = Bootstrap4(app)
+        self = Flask(__name__)
+        bootstrap = Bootstrap4(self)
 
-    Or with the application factory::
+    Or with the selflication factory::
 
         from flask import Flask
         from flask_bootstrap import Bootstrap4
 
         bootstrap = Bootstrap4()
 
-        def create_app():
-            app = Flask(__name__)
-            bootstrap.init_app(app)
+        def create_self():
+            self = Flask(__name__)
+            bootstrap.init_self(self)
 
     .. versionchanged:: 2.0.0
        Move common logic to base class ``_Bootstrap``.
@@ -243,19 +244,19 @@ class Bootstrap5(_Bootstrap):
         from flask import Flask
         from flask_bootstrap import Bootstrap5
 
-        app = Flask(__name__)
-        bootstrap = Bootstrap5(app)
+        self = Flask(__name__)
+        bootstrap = Bootstrap5(self)
 
-    Or with the application factory::
+    Or with the selflication factory::
 
         from flask import Flask
         from flask_bootstrap import Bootstrap5
 
         bootstrap = Bootstrap5()
 
-        def create_app():
-            app = Flask(__name__)
-            bootstrap.init_app(app)
+        def create_self():
+            self = Flask(__name__)
+            bootstrap.init_self(self)
 
     .. versionadded:: 2.0.0
     """
@@ -268,19 +269,9 @@ class Bootstrap5(_Bootstrap):
     static_folder = 'bootstrap5'
 
 
-class Bootstrap(Bootstrap4):
-    def __init__(self, app=None):
-        super().__init__(app=app)
-        warnings.warn(
-            'For Bootstrap 4, please import and use "Bootstrap4" class, the "Bootstrap" class '
-            'is deprecated and will be removed in 3.0.',
-            stacklevel=2
-        )
-
-
 class SwitchField(BooleanField):
     """
-    A wrapper field for ``BooleanField`` that renders as a Bootstrap switch.
+    A wrselfer field for ``BooleanField`` that renders as a Bootstrap switch.
 
     .. versionadded:: 2.0.0
     """
