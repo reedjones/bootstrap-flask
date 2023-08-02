@@ -52,25 +52,16 @@ class _Bootstrap:
     jquery_filename = 'jquery.min.js'
     popper_filename = 'popper.min.js'
 
-    def __init__(self, **options):
+    def __init__(self, jinja_env, **options):
+        self.jinja_env = jinja_env
         self.popper_name = None
         self.config = options
-        self.extensions = {}
-        self.jinja_env = {}
-        if not hasattr(self, 'extensions'):
-            self.extensions = {}  # pragma: no cover
-        self.extensions['bootstrap'] = self
 
-        # blueprint = Blueprint('bootstrap', __name__, static_folder=f'static/{self.static_folder}',
-        #                       static_url_path=f'/bootstrap{self.static_url_path}',
-        #                       template_folder='templates')
-        # self.register_blueprint(blueprint)
-
-        self.jinja_env['bootstrap'] = self
-        self.jinja_env['bootstrap_is_hidden_field'] = is_hidden_field_filter
-        self.jinja_env['get_table_titles'] = get_table_titles
-        self.jinja_env['warn'] = warnings.warn
-        self.jinja_env['raise'] = raise_helper
+        self.jinja_env.globals['bootstrap'] = self
+        self.jinja_env.globals['bootstrap_is_hidden_field'] = is_hidden_field_filter
+        self.jinja_env.globals['get_table_titles'] = get_table_titles
+        self.jinja_env.globals['warn'] = warnings.warn
+        self.jinja_env.globals['raise'] = raise_helper
 
         # default settings
         self.config.setdefault('BOOTSTRAP_SERVE_LOCAL', False)
